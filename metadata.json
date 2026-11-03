@@ -1,0 +1,6 @@
+{
+  "name": "Serine Diagnostics",
+  "description": "Diagnostic laboratory website for Serine Diagnostics located in Chicago, IL, featuring laboratory services, locations, insurance information, and a 4-step guided test booking experience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
