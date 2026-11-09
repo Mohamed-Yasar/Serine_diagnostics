@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Location {
+  id                  String        @id @default(cuid())
+  name                String
+  shortName           String
+  address             String
+  city                String
+  state               String
+  zip                 String
+  phone               String
+  active              Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  fax                 String
+  hasDrawSite         Boolean       @default(true)
+  hasParking          Boolean       @default(false)
+  hasWheelchairAccess Boolean       @default(false)
+  hoursSaturday       String
+  hoursSunday         String
+  hoursWeekday        String
+  specialNotes        String?
+  transitInfo         String
+  appointments        Appointment[]
+
+  @@map("locations")
+}
+
+model LabTest {
+  id                   String            @id @default(cuid())
+  code                 String            @unique
+  name                 String
+  category             String
+  description          String
+  price                Decimal           @db.Decimal(10, 2)
+  fastingRequired      Boolean           @default(false)
+  fastingHours         Int?
+  turnaroundTime       String
+  specimenType         String
+
+  // Patient-facing detailed content
+  whyItIsDone          String?
+  whatItHelpsEvaluate  String?
+  clinicalSignificance String
+  abnormalSymptoms     String?
+  specimenVolume       String?
+  collectionKit        String?
+  patientPreparation   String?
+  importantInformation String?
+  whatIsTested         String[]
+  relatedTests         String[]
+
+  active               Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  categoryLabel        String
+  commonFor            String[]
+  tags                 String[]
+  popular              Boolean           @default(false)
+
+  source               String            @default("SERINE")
+  itemType             String            @default("TEST")
+  bookable             Boolean           @default(true)
+
+  appointmentTests     AppointmentTest[]
+  labOrderTests        LabOrderTest[]
+  packageTests         PackageTest[]
+
+  @@map("lab_tests")
+}
+
+model LabPackage {
+  id               String            @id @default(cuid())
+  name             String
+  description      String
+  price             Decimal           @db.Decimal(10, 2)
+  originalValue    Decimal           @db.Decimal(10, 2)
+  fastingRequired  Boolean
+  turnaroundTime   String
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  badge            String?
+  featured         Boolean           @default(false)
+  recommendedFor   String
+  tagline          String
+  testCount        Int
+  appointmentTests AppointmentTest[]
+  tests            PackageTest[]
+
+  @@map("lab_packages")
+}
+
+model PackageTest {
+  packageId String
+  testId    String
+
+  package LabPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  test    LabTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@id([packageId, testId])
+  @@map("package_tests")
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  confirmationNumber String            @unique
+  appointmentDate    DateTime
+  appointmentTime    String
+  status             String            @default("CONFIRMED")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  locationId         String
+  biologicalSex      String
+  dateOfBirth        DateTime
+  email              String
+  firstName          String
+  hasPhysicianOrder  String
+  insuranceCarrier   String?
+  insuranceType      String
+  lastName           String
+  notes              String?
+  phone              String
+  physicianName      String?
+  specialAssistance  String[]
+  providerId         String?
+
+  tests AppointmentTest[]
+
+  location Location @relation(fields: [locationId], references: [id])
+  provider StaffUser? @relation("ProviderAppointments", fields: [providerId], references: [id])
+
+  @@map("appointments")
+}
+
+model AppointmentTest {
+  id             String      @id @default(cuid())
+  priceAtBooking Decimal     @db.Decimal(10, 2)
+  appointmentId  String
+  testId         String?
+  packageId      String?
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  package     LabPackage? @relation(fields: [packageId], references: [id])
+  test        LabTest?    @relation(fields: [testId], references: [id])
+
+  @@map("appointment_tests")
+}
+
+model StaffUser {
+  id                   String        @id @default(cuid())
+  email                String        @unique
+  passwordHash         String
+  firstName            String
+  lastName             String
+  role                 String        @default("STAFF")
+  active               Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  providerAppointments Appointment[]      @relation("ProviderAppointments")
+  providerOrders       LabOrder[]
+  passwordResetTokens  PasswordResetToken[]
+
+  @@map("staff_users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+
+  @@map("password_reset_tokens")
+}
+
+model LabOrder {
+  id               String         @id @default(cuid())
+  orderNumber      String         @unique
+  providerId       String
+  patientFirstName String
+  patientLastName  String
+  dateOfBirth      DateTime
+  biologicalSex    String
+  email            String?
+  phone            String?
+  status           String         @default("ORDERED")
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  tests LabOrderTest[]
+
+  provider StaffUser @relation(fields: [providerId], references: [id])
+
+  @@map("lab_orders")
+}
+
+model LabOrderTest {
+  id      String  @id @default(cuid())
+  orderId String
+  testId  String
+  price   Decimal @db.Decimal(10, 2)
+
+  order  LabOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  test   LabTest  @relation(fields: [testId], references: [id])
+  result LabResult?
+
+  @@map("lab_order_tests")
+}
+
+model LabResult {
+  id             String    @id @default(cuid())
+  labOrderTestId String
+  resultValue    String?
+  units          String?
+  referenceRange String?
+  resultStatus   String    @default("PENDING")
+  comments       String?
+  performedAt    DateTime?
+  releasedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  labOrderTest LabOrderTest @relation(fields: [labOrderTestId], references: [id], onDelete: Cascade)
+
+  @@unique([labOrderTestId])
+  @@map("lab_results")
+}

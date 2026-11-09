@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "lab_tests" ADD COLUMN     "bookable" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "itemType" TEXT NOT NULL DEFAULT 'TEST',
+ADD COLUMN     "source" TEXT NOT NULL DEFAULT 'SERINE';
